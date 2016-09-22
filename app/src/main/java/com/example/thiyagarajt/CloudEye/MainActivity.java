@@ -15,9 +15,9 @@ import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.clarifai.api.ClarifaiClient;
 import com.clarifai.api.RecognitionRequest;
@@ -28,6 +28,8 @@ import com.clarifai.api.exception.ClarifaiException;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.Locale;
 
 
@@ -38,7 +40,7 @@ public class MainActivity extends Activity {
     public Uri targetfile;
     public StringBuilder b ;
     private TextToSpeech t1;
-
+    private ArrayList<String> tags ;
 
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final int CODE_PICK = 1;
@@ -47,7 +49,7 @@ public class MainActivity extends Activity {
     private Button selectButton;
     private ImageView imageView;
     private TextView textView;
-
+    String speech = "";
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_recognition);
@@ -68,7 +70,7 @@ public class MainActivity extends Activity {
         File newdir = new File(dir);
         newdir.mkdirs();
 
-        Button capture = (Button) findViewById(R.id.btnCapture);
+        ImageButton capture = (ImageButton) findViewById(R.id.btnCapture);
         capture.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
 
@@ -76,7 +78,7 @@ public class MainActivity extends Activity {
                 // picture taken by camera will be stored as 1.jpg,2.jpg
                 // and likewise.
                 count++;
-                String file = dir+count+".jpg";
+                String file = dir+count+new Date().getTime()+".jpg";
                 File newfile = new File(file);
                 try {
                     newfile.createNewFile();
@@ -195,13 +197,15 @@ public class MainActivity extends Activity {
         if (result != null) {
             if (result.getStatusCode() == RecognitionResult.StatusCode.OK) {
                 // Display the list of tags in the UI.
-                 b = new StringBuilder();
-               for (Tag tag : result.getTags()) {
-                    b.append(b.length() > 0 ? ", " : "").append(tag.getName());
+                //b = new StringBuilder();
+                tags = new ArrayList<String>(100);
+                Log.d("Main Activity Tags", String.valueOf(result.getJsonResponse()));
+                for (Tag tag : result.getTags()) {
+                   //b.append(b.length() > 0 ? ", " : "").append(tag.getName());
+                   tags.add(tag.getName());
                }
-                textView.setText("Tags:\n" + b);
-                speak(result);
-
+                textView.setText(tags.toString());
+                speak();
             } else {
                 Log.e(TAG, "Clarifai: " + result.getStatusMessage());
                 textView.setText("Sorry, there was an error recognizing your image.");
@@ -219,7 +223,7 @@ public class MainActivity extends Activity {
 
     }
 
-    public void  speak(RecognitionResult result)
+    public void  speak()
     {
         boolean x ;
 
@@ -228,29 +232,39 @@ public class MainActivity extends Activity {
         am.setStreamVolume(am.STREAM_MUSIC, amStreamMusicMaxVol, 0);
 
 
-        String speech = b.toString() ;
-        if(speech.contains("fire") || speech.contains("flame") )
+
+        if(tags.contains("fire") || tags.contains("flame") )
         {
-            t1.setSpeechRate(1);
+            t1.setSpeechRate(2);
             t1.speak("Dont Panic, Cloud Eye detected instance of fire, Retake a photo and verify, call your known one who is nearby to assist you", TextToSpeech.QUEUE_FLUSH, null);
 
         }
-        else if(speech.contains("car") || speech.contains("transport")||speech.contains("vehicle") || speech.contains("bus"))
+        else if (tags.contains("car") || tags.contains("bike") || tags.contains("bus")) {
+                t1.setSpeechRate(2);
+                t1.speak("You are a location with vehicles around. Be careful while commuting. It is recommended that you ask somebody to aid you.", TextToSpeech.QUEUE_FLUSH, null);
+
+            }
+        else if (tags.contains("blur"))
         {
-            t1.setSpeechRate(1);
-            t1.speak("You are a location with vehicles around. Be careful while commuting. It is recommended that you ask somebody to aid you.", TextToSpeech.QUEUE_FLUSH, null);
+            t1.setSpeechRate(2);
+            t1.speak("Blurry image. Take again please.", TextToSpeech.QUEUE_FLUSH, null);
 
         }
         else {
-
-            String prefix = "The associations recognized in the image are";
-            speech = prefix.concat(" ").concat(speech);
-            Toast.makeText(getApplicationContext(), speech, Toast.LENGTH_SHORT).show();
             t1.setSpeechRate(2);
-            t1.speak(speech, TextToSpeech.QUEUE_FLUSH, null);
+            String prefix = "The associations recognized in the image are ";
+            t1.speak(prefix+tags.toString(),TextToSpeech.QUEUE_FLUSH,null);
+            //Toast.makeText(getApplicationContext(),"SGsg", Toast.LENGTH_SHORT).show();
+               // for (int i = 0; i < tags.size(); i++) {
+                 //  t1.speak(tags.get(i),TextToSpeech.QUEUE_FLUSH,null);
+                //}
+           // t1.speak(tags.toString(),TextToSpeech.QUEUE_FLUSH,null);
+                //speech = prefix.concat(" ").concat(speech);
+                //Toast.makeText(getApplicationContext(), speech, Toast.LENGTH_SHORT).show();
+            /*t1.setSpeechRate(2);
+            t1.speak(speech , TextToSpeech.QUEUE_FLUSH, null);*/
+
+
         }
-
-
     }
-
 }
